@@ -1,1 +1,2 @@
 This project is a reconstruction of BNN matlab project.
+1. rewrite the matlab code
