@@ -21,7 +21,7 @@ class biological_neural_network():
         self.T = self.total_time / self.dt
         self.frequency = 2*1e-3
         self.tau_g = 10 
-        
+
     def izhikevich_parameters_initialization(self):
         a_exc, b_exc, c_exc, d_exc = self.neuron_type(self.exhib_neu_type)
         a_inh, b_inh, c_inh, d_inh = self.neuron_type(self.inh_neu_type)
@@ -127,5 +127,5 @@ def choose_no_conections(w_conex):
 bnn = biological_neural_network(inhibitory_neuron_type='FS', exhibitory_neuron_type='RS',
                                 no_neurons= 1000, no_synapses= 100, inhibitory_prob= 0.1, current=5, total_time=1000, time_init=200, time_final=700)
 a,b,c,d = bnn.forward()
-print(a,b,c,d)
+
 
