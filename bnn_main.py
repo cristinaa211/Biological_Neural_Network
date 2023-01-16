@@ -1,7 +1,11 @@
 
 import numpy as np 
-
 import random
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+import scipy.special as sps  
+import seaborn as sns 
 
 class biological_neural_network():
     def __init__(self, inhibitory_neuron_type, exhibitory_neuron_type, no_neurons, 
@@ -54,12 +58,44 @@ class biological_neural_network():
 
     def initialize_neuron_matrix(self):
         # initialize neuron matrix
+        # g : neurons conductances
         self.g = np.zeros([self.no_neurons, 1])
         self.E = np.zeros([self.no_neurons, 1])
         self.E[self.inh] = -85
-        self.weights = np.zeros([self.no_neurons, self.no_neurons])
-        matrix_indices = random.randint(self.no_neurons, self.no_neurons)
-        # indices = 
+        # existence weights of inhibitory neuron
+        weights = np.zeros((self.no_neurons, self.no_neurons))
+        weights = weights.flatten().tolist()
+        matrix_indices = np.random.random((self.no_neurons, self.no_neurons))
+        flatten_matrix = matrix_indices.flatten()
+        # choose indices for the weights of inhibitory neurons which will receive values from a Gamma distribution 
+        indices = list(np.where(flatten_matrix < self.inh_prob)[0])
+        shape = 2.
+        scale = 0.003
+        gamma_distribution = np.random.gamma(shape = 2, scale = 0.003, size = (len(indices), 1))
+        gamma_distribution = gamma_distribution.tolist()
+        random_gamma_distr_values = random.choices(gamma_distribution, k=len(indices))
+        i = 0
+        for idx in indices:
+            weights[idx] =  random_gamma_distr_values[i][0]
+            i += 1
+        distribution = [weights[idx]   for idx in indices]
+        sns.histplot(distribution)
+        plt.xlabel('Weights values')
+        plt.show()
+
+
+        # self.generate_gamma_distribution(shape, scale, gamma_distribution)
+    def generate_histogram(self, weights_matrix):
+        count, bisn, ignored = plt.hist(weights_matrix, 50, density=True)
+        plt.plot()
+        
+    def generate_gamma_distribution(self, shape, scale, gamma_distribution): 
+        count, bins, ignored = plt.hist(gamma_distribution, 50, density=True)
+        y = bins**(shape-1)*(np.exp(-bins/scale) /  
+                            (sps.gamma(shape)*scale**shape))
+        plt.plot(bins, y, linewidth=2, color='r')  
+        plt.title('Gamma distribution for the values of inhibitory neurons')
+        plt.show()
 
     def neuron_type(self, use_case):
         match use_case :
@@ -125,7 +161,7 @@ def choose_no_conections(w_conex):
 
 
 bnn = biological_neural_network(inhibitory_neuron_type='FS', exhibitory_neuron_type='RS',
-                                no_neurons= 1000, no_synapses= 100, inhibitory_prob= 0.1, current=5, total_time=1000, time_init=200, time_final=700)
+                                no_neurons= 10, no_synapses= 100, inhibitory_prob= 0.1, current=5, total_time=1000, time_init=200, time_final=700)
 a,b,c,d = bnn.forward()
 
 
