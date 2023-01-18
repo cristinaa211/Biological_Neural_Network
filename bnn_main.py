@@ -8,10 +8,13 @@ import scipy.special as sps
 import seaborn as sns 
 from scipy.sparse import csr_matrix
 import math
+import pandas as pd 
+import os
+import pathlib
 
 class biological_neural_network():
     def __init__(self, inhibitory_neuron_type, exhibitory_neuron_type, no_neurons, 
-        no_synapses, inhibitory_prob, current, total_time, time_init, time_final):
+        no_synapses, inhibitory_prob, current, total_time, time_init, time_final, display):
         self.inh_neu_type = inhibitory_neuron_type
         self.exhib_neu_type = exhibitory_neuron_type
         self.no_neurons = no_neurons
@@ -21,6 +24,7 @@ class biological_neural_network():
         self.total_time = total_time
         self.time_init = time_init
         self.time_final = time_final
+        self.display = display
         
     def izhikevich_parameters_initialization(self):
         a_exc, b_exc, c_exc, d_exc = self.neuron_type(self.exhib_neu_type)
@@ -205,25 +209,24 @@ class biological_neural_network():
     def plot_action_potentials(self):
         idx2, idx3 = self.select_random_excitatory_inhibitory_neurons()
         time_step = np.arange(0, self.T) * self.dt
-        time_step = time_step.reshape(len(time_step))
         plt.figure()
         plt.subplot(2, 2, 1)
-        plt.plot(time_step, self.membrane_potential[0,:], 'b')
+        plt.plot(time_step.ravel(), self.membrane_potential[0,:].ravel())
         plt.ylim([-100,100])
         plt.title('MP first neuron')
         plt.xlabel('Time step')
         plt.subplot(2, 2, 2)
-        plt.plot(time_step, self.membrane_potential[idx2,:], 'b')
+        plt.plot(time_step.ravel(), self.membrane_potential[idx2,:].ravel())
         plt.title('MP random excitatory neuron')
         plt.xlabel('Time step')
         plt.ylim([-100,100])
         plt.subplot(2, 2, 3)
-        plt.plot(time_step, self.membrane_potential[idx3,:], 'b')
+        plt.plot(time_step.ravel(), self.membrane_potential[idx3,:].ravel())
         plt.title('MP random inhibitory neuron')
         plt.xlabel('Time step')
         plt.ylim([-100,100])
         plt.subplot(2, 2, 4)
-        plt.plot(time_step, self.membrane_potential[-1,:], 'b')
+        plt.plot(time_step.ravel(), self.membrane_potential[-1,:].ravel())
         plt.title('MP last neuron')
         plt.ylim([-100,100])
         plt.xlabel('Time step')
@@ -306,33 +309,34 @@ class biological_neural_network():
 
     def forward(self):
         network_signal_value, network_current = self.generate_network_current()
-        self.plot_neuron_activation_map()
-        self.plot_action_potentials()
-        self.generate_plots(network_signal_value, network_current )
+        if self.display == True:
+            self.plot_neuron_activation_map()
+            self.plot_action_potentials()
+            self.generate_plots(network_signal_value, network_current )
+        else: pass
+        return network_signal_value, network_current
 
+def perfom_fft_of_signal(signal, title):
+    fourier_transform = np.fft.fft(signal)
+    spectrum_magnitude = np.abs(fourier_transform)
+    frequency = np.fft.fftfreq(len(signal))
+    plt.plot(frequency, spectrum_magnitude)
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel('Magnitude')
+    plt.title('{}'.format(title))
+    plt.show()
 
-def get_random_number(threshold, interval):
-    random_nr = []
-    for _ in range(interval):
-        a = random.randint(0, 2)
-        while a > threshold:
-            a = random.randint(0, 2)
-        random_nr.append(a)
-    return random_nr
+if __name__ == '__main__':  
+    bnn = biological_neural_network(inhibitory_neuron_type='RS', exhibitory_neuron_type='FS',
+                                    no_neurons= 10, no_synapses= 10, inhibitory_prob= 0.5, current=5, total_time=1000, time_init=200, time_final=700, display = False)
+    network_signal_value, network_current = bnn.forward()
+    path_file = os.getcwd()
+    path_file = pathlib.Path(path_file)
+    filename = 'eeg_file_mathematics_subject.csv'
+    eeg_file = pd.read_csv(path_file / filename)
+    eeg_dataframe = pd.DataFrame(eeg_file)
+    perfom_fft_of_signal(eeg_dataframe.iloc[:,1], 'EEG Fp1')
+    perfom_fft_of_signal(network_signal_value[0], 'Network signal value')
 
-def choose_no_conections(w_conex):
-    dim1, dim2 = w_conex.shape
-    w_conex = w_conex.flatten()
-    connections_zeros = np.random.choice(range(len(w_conex)), int(0.1 * len(w_conex)))
-    for idx, item in enumerate(w_conex):
-        if idx not in connections_zeros :
-            w_conex[idx] = 0
-    w_conex = np.reshape(w_conex, (dim1, dim2))
-    return w_conex
-
-
-bnn = biological_neural_network(inhibitory_neuron_type='RS', exhibitory_neuron_type='FS',
-                                no_neurons= 100, no_synapses= 10000, inhibitory_prob= 0.5, current=5, total_time=1000, time_init=200, time_final=700)
-network_current = bnn.forward()
 
 
