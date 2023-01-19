@@ -11,7 +11,8 @@ import math
 import pandas as pd 
 import os
 import pathlib
-
+from scipy.signal import correlate
+from scipy.stats import pearsonr
 class biological_neural_network():
     def __init__(self, inhibitory_neuron_type, exhibitory_neuron_type, no_neurons, 
         no_synapses, inhibitory_prob, current, total_time, time_init, time_final, display):
@@ -96,13 +97,12 @@ class biological_neural_network():
         distribution = [weights[idx] for idx in indices]
         sns.histplot(distribution)
         plt.xlabel('Weights values')
-        plt.show()
+        # plt.show()
         weights = np.reshape(weights, (self.no_neurons , self.no_neurons))
         # the connections between the inhibitory neurons and the excitatory neurons are two times stronger
         weights[self.exc, self.inh] *= 2
         weights = csr_matrix(weights)
         self.weights = weights
-        # self.generate_gamma_distribution(shape = 2, scale = 0.003, gamma_distribution)
 
     def generate_network_current(self):
         '''
@@ -235,9 +235,9 @@ class biological_neural_network():
     def generate_plots(self, network_signal_value, network_current ):
         time_step = np.arange(0, self.T) * self.dt
         plt.figure()
-        plt.plot(time_step.ravel(), network_signal_value[0].ravel(), 'b')
+        plt.plot(time_step.ravel(), network_signal_value[0].ravel() / 1000, 'b')
         plt.xlabel('Time [ms]')
-        plt.ylabel('Membrane potential [mV]')
+        plt.ylabel('Membrane potential [uV]')
         plt.title('Network signal')
         plt.show()
 
@@ -285,18 +285,6 @@ class biological_neural_network():
                 d = 8
         return a , b , c , d 
 
-    def generate_histogram(self, weights_matrix):
-        count, bisn, ignored = plt.hist(weights_matrix, 50, density=True)
-        plt.plot()
-        
-    def generate_gamma_distribution(self, shape, scale, gamma_distribution): 
-        count, bins, ignored = plt.hist(gamma_distribution, 50, density=True)
-        y = bins**(shape-1)*(np.exp(-bins/scale) /  
-                            (sps.gamma(shape)*scale**shape))
-        plt.plot(bins, y, linewidth=2, color='r')  
-        plt.title('Gamma distribution for the values of inhibitory neurons')
-        plt.show()
-
     def select_random_excitatory_inhibitory_neurons(self):
         exc_neurons = np.where(~self.inh)[0]
         inh_neurons = np.where(self.inh)[0]
@@ -316,27 +304,87 @@ class biological_neural_network():
         else: pass
         return network_signal_value, network_current
 
+
+def generate_histogram(weights_matrix):
+    count, bisn, ignored = plt.hist(weights_matrix, 50, density=True)
+    plt.plot()
+    
+def generate_gamma_distribution(shape, scale, gamma_distribution): 
+    count, bins, ignored = plt.hist(gamma_distribution, 50, density=True)
+    y = bins**(shape-1)*(np.exp(-bins/scale) /  
+                        (sps.gamma(shape)*scale**shape))
+    plt.plot(bins, y, linewidth=2, color='r')  
+    plt.title('Gamma distribution for the values of inhibitory neurons')
+    plt.show()
+    
 def perfom_fft_of_signal(signal, title):
-    fourier_transform = np.fft.fft(signal)
-    spectrum_magnitude = np.abs(fourier_transform)
-    frequency = np.fft.fftfreq(len(signal))
+    signal = np.int16((signal / signal.max()))
+    fourier_transform = np.fft.rfft(signal- np.mean(signal), norm='ortho')
+    frequency = np.fft.rfftfreq(len(signal))
+    spectrum_magnitude = np.abs(fourier_transform)[0:] 
     plt.plot(frequency, spectrum_magnitude)
     plt.xlabel('Frequency (Hz)')
     plt.ylabel('Magnitude')
     plt.title('{}'.format(title))
     plt.show()
 
+def perfom_correlation_coefficient(signal1, signal2, display = False):
+    signal1 = signal1.ravel() / max(signal2)
+    signal2 = signal2.ravel() / max(signal2)
+    correlation = np.correlate(signal1, signal2, mode='full')
+    correlation = correlation / (np.linalg.norm(signal1) * np.linalg.norm(signal2))
+    if display == True:
+        plt.figure()
+        plt.subplot(3, 1, 1)
+        plt.plot(np.arange(0, len(signal1)), signal1 )
+        plt.xlabel('Time [ms]')
+        plt.ylabel('Voltage [norm]')
+        plt.title('EEG signal')
+        plt.subplot(3, 1, 2)
+        plt.plot(np.arange(0, len(signal2)), signal2 )
+        plt.xlabel('Time [ms]')
+        plt.ylabel('Voltage [norm]')
+        plt.title('BNN signal')
+        plt.subplot(3, 1, 3)
+        plt.plot(np.arange(0, len(correlation)), correlation)
+        plt.xlabel('Index')
+        plt.ylabel('Correlation coefficient [norm]')
+        plt.title('Cross-correlation of EEG signal and BNN signal')
+        plt.show()
+    if len(signal1) > len(signal2):
+        signal22 = np.resize(signal2, len(signal1))
+        signal11 = signal1
+    else:
+        signal11 = np.resize(signal1, len(signal2))
+        signal22 = signal2
+    correlation_coef = np.corrcoef(signal11, signal22)[0, 1]
+    return correlation_coef
+
+
 if __name__ == '__main__':  
-    bnn = biological_neural_network(inhibitory_neuron_type='RS', exhibitory_neuron_type='FS',
-                                    no_neurons= 10, no_synapses= 10, inhibitory_prob= 0.5, current=5, total_time=1000, time_init=200, time_final=700, display = False)
-    network_signal_value, network_current = bnn.forward()
     path_file = os.getcwd()
     path_file = pathlib.Path(path_file)
     filename = 'eeg_file_mathematics_subject.csv'
     eeg_file = pd.read_csv(path_file / filename)
     eeg_dataframe = pd.DataFrame(eeg_file)
-    perfom_fft_of_signal(eeg_dataframe.iloc[:,1], 'EEG Fp1')
-    perfom_fft_of_signal(network_signal_value[0], 'Network signal value')
+    correlation_list = []
+    neuron_types = ['CH', 'LTS', 'RS', 'FS']
+    for n in [10,100,1000]:
+        inh_neuron_type = np.random.choice(neuron_types)
+        exc_neuron_type = np.random.choice(neuron_types)
+        bnn = biological_neural_network(inhibitory_neuron_type=inh_neuron_type, exhibitory_neuron_type=inh_neuron_type,
+                                    no_neurons= n, no_synapses= 10000, inhibitory_prob= 5,
+                                     current=5, total_time=2000, time_init=200, time_final=1700, display = False)
+        network_signal_value, network_current = bnn.forward()
+        for i in range(eeg_dataframe.shape[1]):
+            if i == 0: pass
+            eeg_signal = eeg_dataframe.iloc[:,i]
+            correlation_value = perfom_correlation_coefficient(eeg_signal, network_signal_value[0])
+            correlation_list.append((n, i, correlation_value,inh_neuron_type, exc_neuron_type ))
+    z,x,y, inh, exc = max(correlation_list, key = lambda x : x[2])
+    print('The electrode number {} has the higher similarity with the BNN signal, having the correlation coefficient = {}, for {} neurons.'.format(x, y, z))
+    print('The neurons type are : inhibitory = {} , excitatory = {}'.format(inh, exc))
+    print('-----------------------------------------------')
 
 
 
