@@ -360,6 +360,75 @@ def perfom_correlation_coefficient(signal1, signal2, display = False):
     correlation_coef = np.corrcoef(signal11, signal22)[0, 1]
     return correlation_coef
 
+def continous_impulse_encoding(use_case, input_current = 7):
+    match use_case :
+        case "FS":
+            a = 0.1
+            b = 0.2
+            c = -65
+            d = 2
+            title = 'FS'
+        case "LTS":
+            a = 0.02
+            b = 0.25
+            c = -65
+            d = 2
+            title = 'LTS'
+        case "IB":
+            a = 0.02
+            b = 0.2
+            c = -55
+            d = 4
+            title = 'IB'
+        case "CH":
+            a = 0.02
+            b = 0.2
+            c = -50
+            d = 2
+            title = 'CH'
+        case "RS":
+            a = 0.02
+            b = 0.2
+            c = -65
+            d = 8
+            title = 'RS'
+    initial_time, final_time, total_time, dt = 100, 700, 1000, 0.5
+    T = math.ceil(total_time / dt)
+    T = int(T)
+    membrane_potential = np.zeros((T,1))
+    recovery_variable = np.zeros_like(membrane_potential)
+    current = np.zeros_like(membrane_potential)
+    current_axis = np.zeros_like(current)
+    membrane_potential[0] = -70
+    recovery_variable[0] = -14
+    for t in range(T-1):
+        I_applied = [input_current if t*dt > initial_time else 0][0]
+        current[t] = I_applied
+        if I_applied > 10: I_applied = 10
+        current_axis[t] = I_applied - 90
+        I_applied = current[t]
+        if membrane_potential[t] < 35:
+            dv = (0.04 * membrane_potential[t] + 5)*membrane_potential[t] + 140 - recovery_variable[t]
+            membrane_potential[t+1] = membrane_potential[t] + (dv + I_applied)*dt 
+            du = a*(b*membrane_potential[t] - recovery_variable[t])
+            recovery_variable[t+1] = recovery_variable[t] + dt*du
+        else: 
+            membrane_potential[t] = 35
+            membrane_potential[t+1] = c
+            recovery_variable[t+1] = recovery_variable[t] + d
+    time_vector = dt * np.arange(0, T)
+    plt.figure()
+    plt.plot(time_vector, membrane_potential)
+    plt.plot(time_vector, current_axis, 'r')
+    plt.xlabel('Time [ms]')
+    plt.ylabel('Potential V [mV]')
+    plt.legend('Membrane potential', 'Excitation current', loc = 'best')
+    plt.title('{}'.format(title))
+    plt.show()
+
+
+
+
 
 if __name__ == '__main__':  
     path_file = os.getcwd()
@@ -369,22 +438,23 @@ if __name__ == '__main__':
     eeg_dataframe = pd.DataFrame(eeg_file)
     correlation_list = []
     neuron_types = ['CH', 'LTS', 'RS', 'FS']
-    for n in [10,100,1000]:
-        inh_neuron_type = np.random.choice(neuron_types)
-        exc_neuron_type = np.random.choice(neuron_types)
-        bnn = biological_neural_network(inhibitory_neuron_type=inh_neuron_type, exhibitory_neuron_type=inh_neuron_type,
-                                    no_neurons= n, no_synapses= 10000, inhibitory_prob= 5,
-                                     current=5, total_time=2000, time_init=200, time_final=1700, display = False)
-        network_signal_value, network_current = bnn.forward()
-        for i in range(eeg_dataframe.shape[1]):
-            if i == 0: pass
-            eeg_signal = eeg_dataframe.iloc[:,i]
-            correlation_value = perfom_correlation_coefficient(eeg_signal, network_signal_value[0])
-            correlation_list.append((n, i, correlation_value,inh_neuron_type, exc_neuron_type ))
-    z,x,y, inh, exc = max(correlation_list, key = lambda x : x[2])
-    print('The electrode number {} has the higher similarity with the BNN signal, having the correlation coefficient = {}, for {} neurons.'.format(x, y, z))
-    print('The neurons type are : inhibitory = {} , excitatory = {}'.format(inh, exc))
+    # for n in [10,100,1000]:
+    #     inh_neuron_type = np.random.choice(neuron_types)
+    #     exc_neuron_type = np.random.choice(neuron_types)
+    #     bnn = biological_neural_network(inhibitory_neuron_type=inh_neuron_type, exhibitory_neuron_type=inh_neuron_type,
+    #                                 no_neurons= n, no_synapses= 10000, inhibitory_prob= 5,
+    #                                  current=5, total_time=2000, time_init=200, time_final=1700, display = False)
+    #     network_signal_value, network_current = bnn.forward()
+    #     for i in range(eeg_dataframe.shape[1]):
+    #         if i == 0: pass
+    #         eeg_signal = eeg_dataframe.iloc[:,i]
+    #         correlation_value = perfom_correlation_coefficient(eeg_signal, network_signal_value[0])
+    #         correlation_list.append((n, i, correlation_value,inh_neuron_type, exc_neuron_type ))
+    # z,x,y, inh, exc = max(correlation_list, key = lambda x : x[2])
+    # print('The electrode number {} has the higher similarity with the BNN signal, having the correlation coefficient = {}, for {} neurons.'.format(x, y, z))
+    # print('The neurons type are : inhibitory = {} , excitatory = {}'.format(inh, exc))
     print('-----------------------------------------------')
-
+    for neu_type in neuron_types :
+        continous_impulse_encoding(neu_type, 7)
 
 
