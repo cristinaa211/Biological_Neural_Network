@@ -8,10 +8,14 @@ import scipy.special as sps
 import seaborn as sns 
 from scipy.sparse import csr_matrix
 import math
-
+import pandas as pd 
+import os
+import pathlib
+from scipy.signal import correlate
+from scipy.stats import pearsonr
 class biological_neural_network():
     def __init__(self, inhibitory_neuron_type, exhibitory_neuron_type, no_neurons, 
-        no_synapses, inhibitory_prob, current, total_time, time_init, time_final):
+        no_synapses, inhibitory_prob, current, total_time, time_init, time_final, display):
         self.inh_neu_type = inhibitory_neuron_type
         self.exhib_neu_type = exhibitory_neuron_type
         self.no_neurons = no_neurons
@@ -21,6 +25,7 @@ class biological_neural_network():
         self.total_time = total_time
         self.time_init = time_init
         self.time_final = time_final
+        self.display = display
         
     def izhikevich_parameters_initialization(self):
         a_exc, b_exc, c_exc, d_exc = self.neuron_type(self.exhib_neu_type)
@@ -92,13 +97,12 @@ class biological_neural_network():
         distribution = [weights[idx] for idx in indices]
         sns.histplot(distribution)
         plt.xlabel('Weights values')
-        plt.show()
+        # plt.show()
         weights = np.reshape(weights, (self.no_neurons , self.no_neurons))
         # the connections between the inhibitory neurons and the excitatory neurons are two times stronger
         weights[self.exc, self.inh] *= 2
         weights = csr_matrix(weights)
         self.weights = weights
-        # self.generate_gamma_distribution(shape = 2, scale = 0.003, gamma_distribution)
 
     def generate_network_current(self):
         '''
@@ -205,25 +209,24 @@ class biological_neural_network():
     def plot_action_potentials(self):
         idx2, idx3 = self.select_random_excitatory_inhibitory_neurons()
         time_step = np.arange(0, self.T) * self.dt
-        time_step = time_step.reshape(len(time_step))
         plt.figure()
         plt.subplot(2, 2, 1)
-        plt.plot(time_step, self.membrane_potential[0,:], 'b')
+        plt.plot(time_step.ravel(), self.membrane_potential[0,:].ravel())
         plt.ylim([-100,100])
         plt.title('MP first neuron')
         plt.xlabel('Time step')
         plt.subplot(2, 2, 2)
-        plt.plot(time_step, self.membrane_potential[idx2,:], 'b')
+        plt.plot(time_step.ravel(), self.membrane_potential[idx2,:].ravel())
         plt.title('MP random excitatory neuron')
         plt.xlabel('Time step')
         plt.ylim([-100,100])
         plt.subplot(2, 2, 3)
-        plt.plot(time_step, self.membrane_potential[idx3,:], 'b')
+        plt.plot(time_step.ravel(), self.membrane_potential[idx3,:].ravel())
         plt.title('MP random inhibitory neuron')
         plt.xlabel('Time step')
         plt.ylim([-100,100])
         plt.subplot(2, 2, 4)
-        plt.plot(time_step, self.membrane_potential[-1,:], 'b')
+        plt.plot(time_step.ravel(), self.membrane_potential[-1,:].ravel())
         plt.title('MP last neuron')
         plt.ylim([-100,100])
         plt.xlabel('Time step')
@@ -232,9 +235,9 @@ class biological_neural_network():
     def generate_plots(self, network_signal_value, network_current ):
         time_step = np.arange(0, self.T) * self.dt
         plt.figure()
-        plt.plot(time_step.ravel(), network_signal_value[0].ravel(), 'b')
+        plt.plot(time_step.ravel(), network_signal_value[0].ravel() / 1000, 'b')
         plt.xlabel('Time [ms]')
-        plt.ylabel('Membrane potential [mV]')
+        plt.ylabel('Membrane potential [uV]')
         plt.title('Network signal')
         plt.show()
 
@@ -282,18 +285,6 @@ class biological_neural_network():
                 d = 8
         return a , b , c , d 
 
-    def generate_histogram(self, weights_matrix):
-        count, bisn, ignored = plt.hist(weights_matrix, 50, density=True)
-        plt.plot()
-        
-    def generate_gamma_distribution(self, shape, scale, gamma_distribution): 
-        count, bins, ignored = plt.hist(gamma_distribution, 50, density=True)
-        y = bins**(shape-1)*(np.exp(-bins/scale) /  
-                            (sps.gamma(shape)*scale**shape))
-        plt.plot(bins, y, linewidth=2, color='r')  
-        plt.title('Gamma distribution for the values of inhibitory neurons')
-        plt.show()
-
     def select_random_excitatory_inhibitory_neurons(self):
         exc_neurons = np.where(~self.inh)[0]
         inh_neurons = np.where(self.inh)[0]
@@ -306,33 +297,164 @@ class biological_neural_network():
 
     def forward(self):
         network_signal_value, network_current = self.generate_network_current()
-        self.plot_neuron_activation_map()
-        self.plot_action_potentials()
-        self.generate_plots(network_signal_value, network_current )
+        if self.display == True:
+            self.plot_neuron_activation_map()
+            self.plot_action_potentials()
+            self.generate_plots(network_signal_value, network_current )
+        else: pass
+        return network_signal_value, network_current
 
 
-def get_random_number(threshold, interval):
-    random_nr = []
-    for _ in range(interval):
-        a = random.randint(0, 2)
-        while a > threshold:
-            a = random.randint(0, 2)
-        random_nr.append(a)
-    return random_nr
+def generate_histogram(weights_matrix):
+    count, bisn, ignored = plt.hist(weights_matrix, 50, density=True)
+    plt.plot()
+    
+def generate_gamma_distribution(shape, scale, gamma_distribution): 
+    count, bins, ignored = plt.hist(gamma_distribution, 50, density=True)
+    y = bins**(shape-1)*(np.exp(-bins/scale) /  
+                        (sps.gamma(shape)*scale**shape))
+    plt.plot(bins, y, linewidth=2, color='r')  
+    plt.title('Gamma distribution for the values of inhibitory neurons')
+    plt.show()
+    
+def perfom_fft_of_signal(signal, title):
+    signal = np.int16((signal / signal.max()))
+    fourier_transform = np.fft.rfft(signal- np.mean(signal), norm='ortho')
+    frequency = np.fft.rfftfreq(len(signal))
+    spectrum_magnitude = np.abs(fourier_transform)[0:] 
+    plt.plot(frequency, spectrum_magnitude)
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel('Magnitude')
+    plt.title('{}'.format(title))
+    plt.show()
 
-def choose_no_conections(w_conex):
-    dim1, dim2 = w_conex.shape
-    w_conex = w_conex.flatten()
-    connections_zeros = np.random.choice(range(len(w_conex)), int(0.1 * len(w_conex)))
-    for idx, item in enumerate(w_conex):
-        if idx not in connections_zeros :
-            w_conex[idx] = 0
-    w_conex = np.reshape(w_conex, (dim1, dim2))
-    return w_conex
+def perfom_correlation_coefficient(signal1, signal2, display = False):
+    signal1 = signal1.ravel() / max(signal2)
+    signal2 = signal2.ravel() / max(signal2)
+    correlation = np.correlate(signal1, signal2, mode='full')
+    correlation = correlation / (np.linalg.norm(signal1) * np.linalg.norm(signal2))
+    if display == True:
+        plt.figure()
+        plt.subplot(3, 1, 1)
+        plt.plot(np.arange(0, len(signal1)), signal1 )
+        plt.xlabel('Time [ms]')
+        plt.ylabel('Voltage [norm]')
+        plt.title('EEG signal')
+        plt.subplot(3, 1, 2)
+        plt.plot(np.arange(0, len(signal2)), signal2 )
+        plt.xlabel('Time [ms]')
+        plt.ylabel('Voltage [norm]')
+        plt.title('BNN signal')
+        plt.subplot(3, 1, 3)
+        plt.plot(np.arange(0, len(correlation)), correlation)
+        plt.xlabel('Index')
+        plt.ylabel('Correlation coefficient [norm]')
+        plt.title('Cross-correlation of EEG signal and BNN signal')
+        plt.show()
+    if len(signal1) > len(signal2):
+        signal22 = np.resize(signal2, len(signal1))
+        signal11 = signal1
+    else:
+        signal11 = np.resize(signal1, len(signal2))
+        signal22 = signal2
+    correlation_coef = np.corrcoef(signal11, signal22)[0, 1]
+    return correlation_coef
+
+def continous_impulse_encoding(use_case, input_current = 7):
+    match use_case :
+        case "FS":
+            a = 0.1
+            b = 0.2
+            c = -65
+            d = 2
+            title = 'FS'
+        case "LTS":
+            a = 0.02
+            b = 0.25
+            c = -65
+            d = 2
+            title = 'LTS'
+        case "IB":
+            a = 0.02
+            b = 0.2
+            c = -55
+            d = 4
+            title = 'IB'
+        case "CH":
+            a = 0.02
+            b = 0.2
+            c = -50
+            d = 2
+            title = 'CH'
+        case "RS":
+            a = 0.02
+            b = 0.2
+            c = -65
+            d = 8
+            title = 'RS'
+    initial_time, final_time, total_time, dt = 100, 700, 1000, 0.5
+    T = math.ceil(total_time / dt)
+    T = int(T)
+    membrane_potential = np.zeros((T,1))
+    recovery_variable = np.zeros_like(membrane_potential)
+    current = np.zeros_like(membrane_potential)
+    current_axis = np.zeros_like(current)
+    membrane_potential[0] = -70
+    recovery_variable[0] = -14
+    for t in range(T-1):
+        I_applied = [input_current if t*dt > initial_time else 0][0]
+        current[t] = I_applied
+        if I_applied > 10: I_applied = 10
+        current_axis[t] = I_applied - 90
+        I_applied = current[t]
+        if membrane_potential[t] < 35:
+            dv = (0.04 * membrane_potential[t] + 5)*membrane_potential[t] + 140 - recovery_variable[t]
+            membrane_potential[t+1] = membrane_potential[t] + (dv + I_applied)*dt 
+            du = a*(b*membrane_potential[t] - recovery_variable[t])
+            recovery_variable[t+1] = recovery_variable[t] + dt*du
+        else: 
+            membrane_potential[t] = 35
+            membrane_potential[t+1] = c
+            recovery_variable[t+1] = recovery_variable[t] + d
+    time_vector = dt * np.arange(0, T)
+    plt.figure()
+    plt.plot(time_vector, membrane_potential)
+    plt.plot(time_vector, current_axis, 'r')
+    plt.xlabel('Time [ms]')
+    plt.ylabel('Potential V [mV]')
+    plt.legend('Membrane potential', 'Excitation current', loc = 'best')
+    plt.title('{}'.format(title))
+    plt.show()
 
 
-bnn = biological_neural_network(inhibitory_neuron_type='RS', exhibitory_neuron_type='FS',
-                                no_neurons= 100, no_synapses= 10000, inhibitory_prob= 0.5, current=5, total_time=1000, time_init=200, time_final=700)
-network_current = bnn.forward()
+
+
+
+if __name__ == '__main__':  
+    path_file = os.getcwd()
+    path_file = pathlib.Path(path_file)
+    filename = 'eeg_file_mathematics_subject.csv'
+    eeg_file = pd.read_csv(path_file / filename)
+    eeg_dataframe = pd.DataFrame(eeg_file)
+    correlation_list = []
+    neuron_types = ['CH', 'LTS', 'RS', 'FS']
+    # for n in [10,100,1000]:
+    #     inh_neuron_type = np.random.choice(neuron_types)
+    #     exc_neuron_type = np.random.choice(neuron_types)
+    #     bnn = biological_neural_network(inhibitory_neuron_type=inh_neuron_type, exhibitory_neuron_type=inh_neuron_type,
+    #                                 no_neurons= n, no_synapses= 10000, inhibitory_prob= 5,
+    #                                  current=5, total_time=2000, time_init=200, time_final=1700, display = False)
+    #     network_signal_value, network_current = bnn.forward()
+    #     for i in range(eeg_dataframe.shape[1]):
+    #         if i == 0: pass
+    #         eeg_signal = eeg_dataframe.iloc[:,i]
+    #         correlation_value = perfom_correlation_coefficient(eeg_signal, network_signal_value[0])
+    #         correlation_list.append((n, i, correlation_value,inh_neuron_type, exc_neuron_type ))
+    # z,x,y, inh, exc = max(correlation_list, key = lambda x : x[2])
+    # print('The electrode number {} has the higher similarity with the BNN signal, having the correlation coefficient = {}, for {} neurons.'.format(x, y, z))
+    # print('The neurons type are : inhibitory = {} , excitatory = {}'.format(inh, exc))
+    print('-----------------------------------------------')
+    for neu_type in neuron_types :
+        continous_impulse_encoding(neu_type, 7)
 
 

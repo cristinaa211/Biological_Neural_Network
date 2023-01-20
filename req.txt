@@ -1,2 +1,5 @@
 This project is a reconstruction of BNN matlab project.
-1. rewrite the matlab code
+	1. rewrite the matlab code
+	2. read the eeg data and perform correlation
+	3. make research on the subject
+	4. write Jupyter notebook file 
