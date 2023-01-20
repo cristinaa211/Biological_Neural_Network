@@ -438,21 +438,21 @@ if __name__ == '__main__':
     eeg_dataframe = pd.DataFrame(eeg_file)
     correlation_list = []
     neuron_types = ['CH', 'LTS', 'RS', 'FS']
-    # for n in [10,100,1000]:
-    #     inh_neuron_type = np.random.choice(neuron_types)
-    #     exc_neuron_type = np.random.choice(neuron_types)
-    #     bnn = biological_neural_network(inhibitory_neuron_type=inh_neuron_type, exhibitory_neuron_type=inh_neuron_type,
-    #                                 no_neurons= n, no_synapses= 10000, inhibitory_prob= 5,
-    #                                  current=5, total_time=2000, time_init=200, time_final=1700, display = False)
-    #     network_signal_value, network_current = bnn.forward()
-    #     for i in range(eeg_dataframe.shape[1]):
-    #         if i == 0: pass
-    #         eeg_signal = eeg_dataframe.iloc[:,i]
-    #         correlation_value = perfom_correlation_coefficient(eeg_signal, network_signal_value[0])
-    #         correlation_list.append((n, i, correlation_value,inh_neuron_type, exc_neuron_type ))
-    # z,x,y, inh, exc = max(correlation_list, key = lambda x : x[2])
-    # print('The electrode number {} has the higher similarity with the BNN signal, having the correlation coefficient = {}, for {} neurons.'.format(x, y, z))
-    # print('The neurons type are : inhibitory = {} , excitatory = {}'.format(inh, exc))
+    for n in [10,100,1000]:
+        inh_neuron_type = np.random.choice(neuron_types)
+        exc_neuron_type = np.random.choice(neuron_types)
+        bnn = biological_neural_network(inhibitory_neuron_type=inh_neuron_type, exhibitory_neuron_type=inh_neuron_type,
+                                    no_neurons= n, no_synapses= 10000, inhibitory_prob= 5,
+                                     current=5, total_time=2000, time_init=200, time_final=1700, display = False)
+        network_signal_value, network_current = bnn.forward()
+        for i in range(eeg_dataframe.shape[1]):
+            if i == 0: pass
+            eeg_signal = eeg_dataframe.iloc[:,i]
+            correlation_value = perfom_correlation_coefficient(eeg_signal, network_signal_value[0])
+            correlation_list.append((n, i, correlation_value,inh_neuron_type, exc_neuron_type ))
+    z,x,y, inh, exc = max(correlation_list, key = lambda x : x[2])
+    print('The electrode number {} has the higher similarity with the BNN signal, having the correlation coefficient = {}, for {} neurons.'.format(x, y, z))
+    print('The neurons type are : inhibitory = {} , excitatory = {}'.format(inh, exc))
     print('-----------------------------------------------')
     for neu_type in neuron_types :
         continous_impulse_encoding(neu_type, 7)
