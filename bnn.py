@@ -1,21 +1,16 @@
-
 import numpy as np 
 import random
-import matplotlib
-matplotlib.use('TkAgg')
+# matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-import scipy.special as sps  
 import seaborn as sns 
 from scipy.sparse import csr_matrix
 import math
-import pandas as pd 
-import os
-import pathlib
-from scipy.signal import correlate
-from scipy.stats import pearsonr
-class biological_neural_network():
+from continuous_impulse_encoding import neuron_type
+
+
+class BiologicalNeuralNetwork:
     def __init__(self, inhibitory_neuron_type, exhibitory_neuron_type, no_neurons, 
-        no_synapses, inhibitory_prob, current, total_time, time_init, time_final, display):
+        no_synapses, inhibitory_prob, current, total_time):
         self.inh_neu_type = inhibitory_neuron_type
         self.exhib_neu_type = exhibitory_neuron_type
         self.no_neurons = no_neurons
@@ -23,13 +18,13 @@ class biological_neural_network():
         self.inh_prob = inhibitory_prob
         self.current = current
         self.total_time = total_time
-        self.time_init = time_init
-        self.time_final = time_final
-        self.display = display
+        self.time_init = 200
+        self.time_final = total_time - self.time_init
         
     def izhikevich_parameters_initialization(self):
-        a_exc, b_exc, c_exc, d_exc = self.neuron_type(self.exhib_neu_type)
-        a_inh, b_inh, c_inh, d_inh = self.neuron_type(self.inh_neu_type)
+        """Initialization of the parameteres a, b, c and d in the Izhikevich Neuron Model"""
+        a_exc, b_exc, c_exc, d_exc = neuron_type(self.exhib_neu_type)
+        a_inh, b_inh, c_inh, d_inh = neuron_type(self.inh_neu_type)
         inh_value = self.inh_prob + 1
         exc_value = self.inh_prob + 1
         inh_value = np.random.rand(self.no_neurons, 1) < self.inh_prob
@@ -46,16 +41,19 @@ class biological_neural_network():
         return a, b, c, d
 
     def initialize_time_variables(self):
+        """Initialize time variables:
+        dt          : total time 
+        T           : total number of time steps
+        frequency   : the Posisson fire rate
+        tau_g       : time constant for synaptic conductance"""
         self.dt = 0.5
-        # total number of time steps
         self.T = math.ceil(self.total_time / self.dt)
         self.T = int(self.T)
-        # Poisson firing rate
-        self.frequency = 2*1e-3
-         # time constant for synaptic conductance
+        self.frequency = 200
         self.tau_g = 10 
 
     def initialize_synapse_matrix(self):
+        """Initialize the conductance of synapse matrix """
         # conductance of network's synapses
         self.g_conex = np.zeros((self.no_synapses,1))
         # reversal potential of network's synapses
@@ -64,9 +62,10 @@ class biological_neural_network():
         w_conex = 0.07 * np.ones((self.no_neurons, self.no_synapses))
         w_conex[np.random.rand(self.no_neurons, self.no_synapses) > 0.1] = 0
         self.w_conex = w_conex
-        return True
+
         
     def initialize_membrane_potential_matrix_recovery_variable(self):
+        """Initialize the membrane potential matrix recovery variable"""
         self.membrane_potential = np.zeros((self.no_neurons, self.T))
         self.recovery_variable = np.zeros((self.no_neurons, self.T))
         self.crt_interm = np.zeros((self.no_neurons, self.T))
@@ -74,8 +73,8 @@ class biological_neural_network():
         self.recovery_variable[:,0] = -14
 
     def initialize_neuron_matrix(self):
-        # initialize neuron matrix
-        # # synaptic conductances
+        """Initialize neurons matrix"""
+        # synaptic conductances
         self.g = np.zeros((self.no_neurons, 1))
         # synaptic reversal potentials
         self.E = np.zeros((self.no_neurons,1))
@@ -109,13 +108,15 @@ class biological_neural_network():
         The method is trying to simulate the 
         membrane potential of the network by updating 
         the conductance of the network's synapses,
-         calculating the applied current, updating the 
+        calculating the applied current, updating the 
         conductance of the network, calculating the recurrent current, 
         and updating the membrane potential of the
-         neurons using the Izhikevich model.
-        Initializes two arrays (sum_0, sum_1) to store the sum of certain values, and a variable "fired" to store the number of neurons that have fired.
+        neurons using the Izhikevich model.
+        Initializes two arrays (sum_0, sum_1) to store the sum of certain values, 
+        and a variable "fired" to store the number of neurons that have fired.
         Applies a current to the neurons if the current time step is the first time step.
-        Determines whether a random subset of the synapses are active based on a probability determined by the time step and a predefined time window.
+        Determines whether a random subset of the synapses are active based on a probability
+        determined by the time step and a predefined time window.
         Calculates the total current applied to the neurons based on the active synapses and the membrane potential of the neurons.
         Updates the membrane potential and recovery variable of the neurons using the Izhikevich model equations.
         Checks if any of the neurons have fired and updates their membrane potential accordingly.
@@ -126,8 +127,8 @@ class biological_neural_network():
         self.initialize_synapse_matrix()
         self.initialize_neuron_matrix()
         self.initialize_membrane_potential_matrix_recovery_variable()
-        sum_0 = np.zeros((1, self.T))
-        sum_1 = np.zeros((1, self.T))
+        total_net_mp = np.zeros((1, self.T))
+        total_net_current = np.zeros((1, self.T))
         # store the number of neurons that have fired
         fired = 0
         for t in range(self.T-1) : 
@@ -179,13 +180,14 @@ class biological_neural_network():
             self.membrane_potential[fired, t+1] = c[fired]
             self.recovery_variable[fired, t+1] = self.recovery_variable[fired, t] + d[fired]
             for j in range(0, self.no_neurons):
-                sum_0[0,t] = sum_0[0,t] + self.membrane_potential[j,t]
-                sum_1[0,t] = sum_1[0,t] + self.crt_interm[j,t]
-        sum_0 = np.nan_to_num(sum_0)
-        sum_1 = np.nan_to_num(sum_1)
-        return sum_0, sum_1
+                total_net_mp[0,t] = total_net_mp[0,t] + self.membrane_potential[j,t]
+                total_net_current[0,t] = total_net_current[0,t] + self.crt_interm[j,t]
+        total_net_mp = np.nan_to_num(total_net_mp)
+        total_net_current = np.nan_to_num(total_net_current)
+        return  total_net_mp, total_net_current
 
     def plot_neuron_activation_map(self):
+        """Displays the neuron activation map"""
         spikes = (self.membrane_potential == 35)
         dim1, dim2 = spikes.shape
         time_step = np.arange(0, self.T) * self.dt
@@ -207,32 +209,35 @@ class biological_neural_network():
 
 
     def plot_action_potentials(self):
+        """Displays the action potentials of different neurons"""
         idx2, idx3 = self.select_random_excitatory_inhibitory_neurons()
         time_step = np.arange(0, self.T) * self.dt
         plt.figure()
         plt.subplot(2, 2, 1)
         plt.plot(time_step.ravel(), self.membrane_potential[0,:].ravel())
         plt.ylim([-100,100])
-        plt.title('MP first neuron')
+        plt.title('AP first neuron')
         plt.xlabel('Time step')
         plt.subplot(2, 2, 2)
         plt.plot(time_step.ravel(), self.membrane_potential[idx2,:].ravel())
-        plt.title('MP random excitatory neuron')
+        plt.title('AP random excitatory neuron')
         plt.xlabel('Time step')
         plt.ylim([-100,100])
         plt.subplot(2, 2, 3)
         plt.plot(time_step.ravel(), self.membrane_potential[idx3,:].ravel())
-        plt.title('MP random inhibitory neuron')
+        plt.title('AP random inhibitory neuron')
         plt.xlabel('Time step')
         plt.ylim([-100,100])
         plt.subplot(2, 2, 4)
         plt.plot(time_step.ravel(), self.membrane_potential[-1,:].ravel())
-        plt.title('MP last neuron')
+        plt.title('AP last neuron')
         plt.ylim([-100,100])
         plt.xlabel('Time step')
         plt.show()
 
     def generate_plots(self, network_signal_value, network_current ):
+        """Displays the Membrane Potential of the network as a whole, the network's current intensity,
+        and action potentials of neurons individually at each moment of time"""
         time_step = np.arange(0, self.T) * self.dt
         plt.figure()
         plt.plot(time_step.ravel(), network_signal_value[0].ravel() / 1000, 'b')
@@ -256,36 +261,8 @@ class biological_neural_network():
         plt.title('Action potentials at each moment of time')
         plt.show()
 
-    def neuron_type(self, use_case):
-        match use_case :
-            case "FS":
-                a = 0.1
-                b = 0.2
-                c = -65
-                d = 2
-            case "LTS":
-                a = 0.02
-                b = 0.25
-                c = -65
-                d = 2
-            case "IB":
-                a = 0.02
-                b = 0.2
-                c = -55
-                d = 4
-            case "CH":
-                a = 0.02
-                b = 0.2
-                c = -50
-                d = 2
-            case "RS":
-                a = 0.02
-                b = 0.2
-                c = -65
-                d = 8
-        return a , b , c , d 
-
     def select_random_excitatory_inhibitory_neurons(self):
+        """Selects the random excitatory and inhibitory neurons"""
         exc_neurons = np.where(~self.inh)[0]
         inh_neurons = np.where(self.inh)[0]
         try:
@@ -293,168 +270,18 @@ class biological_neural_network():
             idx3 = np.random.choice(inh_neurons, 1)
         except:
             idx3 = 0
-        return  int(idx2), int(idx3)
+        return int(idx2), int(idx3)
 
-    def forward(self):
+    def forward(self, display):
+        """Generates the network current of the whole network and plots the neuron activation map, the action potentials of neurons and other plots"""
         network_signal_value, network_current = self.generate_network_current()
-        if self.display == True:
+        if display == True:
             self.plot_neuron_activation_map()
             self.plot_action_potentials()
             self.generate_plots(network_signal_value, network_current )
         else: pass
-        return network_signal_value, network_current
+        return network_signal_value
 
 
-def generate_histogram(weights_matrix):
-    count, bisn, ignored = plt.hist(weights_matrix, 50, density=True)
-    plt.plot()
-    
-def generate_gamma_distribution(shape, scale, gamma_distribution): 
-    count, bins, ignored = plt.hist(gamma_distribution, 50, density=True)
-    y = bins**(shape-1)*(np.exp(-bins/scale) /  
-                        (sps.gamma(shape)*scale**shape))
-    plt.plot(bins, y, linewidth=2, color='r')  
-    plt.title('Gamma distribution for the values of inhibitory neurons')
-    plt.show()
-    
-def perfom_fft_of_signal(signal, title):
-    signal = np.int16((signal / signal.max()))
-    fourier_transform = np.fft.rfft(signal- np.mean(signal), norm='ortho')
-    frequency = np.fft.rfftfreq(len(signal))
-    spectrum_magnitude = np.abs(fourier_transform)[0:] 
-    plt.plot(frequency, spectrum_magnitude)
-    plt.xlabel('Frequency (Hz)')
-    plt.ylabel('Magnitude')
-    plt.title('{}'.format(title))
-    plt.show()
-
-def perfom_correlation_coefficient(signal1, signal2, display = False):
-    signal1 = signal1.ravel() / max(signal2)
-    signal2 = signal2.ravel() / max(signal2)
-    correlation = np.correlate(signal1, signal2, mode='full')
-    correlation = correlation / (np.linalg.norm(signal1) * np.linalg.norm(signal2))
-    if display == True:
-        plt.figure()
-        plt.subplot(3, 1, 1)
-        plt.plot(np.arange(0, len(signal1)), signal1 )
-        plt.xlabel('Time [ms]')
-        plt.ylabel('Voltage [norm]')
-        plt.title('EEG signal')
-        plt.subplot(3, 1, 2)
-        plt.plot(np.arange(0, len(signal2)), signal2 )
-        plt.xlabel('Time [ms]')
-        plt.ylabel('Voltage [norm]')
-        plt.title('BNN signal')
-        plt.subplot(3, 1, 3)
-        plt.plot(np.arange(0, len(correlation)), correlation)
-        plt.xlabel('Index')
-        plt.ylabel('Correlation coefficient [norm]')
-        plt.title('Cross-correlation of EEG signal and BNN signal')
-        plt.show()
-    if len(signal1) > len(signal2):
-        signal22 = np.resize(signal2, len(signal1))
-        signal11 = signal1
-    else:
-        signal11 = np.resize(signal1, len(signal2))
-        signal22 = signal2
-    correlation_coef = np.corrcoef(signal11, signal22)[0, 1]
-    return correlation_coef
-
-def continous_impulse_encoding(use_case, input_current = 7):
-    match use_case :
-        case "FS":
-            a = 0.1
-            b = 0.2
-            c = -65
-            d = 2
-            title = 'FS'
-        case "LTS":
-            a = 0.02
-            b = 0.25
-            c = -65
-            d = 2
-            title = 'LTS'
-        case "IB":
-            a = 0.02
-            b = 0.2
-            c = -55
-            d = 4
-            title = 'IB'
-        case "CH":
-            a = 0.02
-            b = 0.2
-            c = -50
-            d = 2
-            title = 'CH'
-        case "RS":
-            a = 0.02
-            b = 0.2
-            c = -65
-            d = 8
-            title = 'RS'
-    initial_time, final_time, total_time, dt = 100, 700, 1000, 0.5
-    T = math.ceil(total_time / dt)
-    T = int(T)
-    membrane_potential = np.zeros((T,1))
-    recovery_variable = np.zeros_like(membrane_potential)
-    current = np.zeros_like(membrane_potential)
-    current_axis = np.zeros_like(current)
-    membrane_potential[0] = -70
-    recovery_variable[0] = -14
-    for t in range(T-1):
-        I_applied = [input_current if t*dt > initial_time else 0][0]
-        current[t] = I_applied
-        if I_applied > 10: I_applied = 10
-        current_axis[t] = I_applied - 90
-        I_applied = current[t]
-        if membrane_potential[t] < 35:
-            dv = (0.04 * membrane_potential[t] + 5)*membrane_potential[t] + 140 - recovery_variable[t]
-            membrane_potential[t+1] = membrane_potential[t] + (dv + I_applied)*dt 
-            du = a*(b*membrane_potential[t] - recovery_variable[t])
-            recovery_variable[t+1] = recovery_variable[t] + dt*du
-        else: 
-            membrane_potential[t] = 35
-            membrane_potential[t+1] = c
-            recovery_variable[t+1] = recovery_variable[t] + d
-    time_vector = dt * np.arange(0, T)
-    plt.figure()
-    plt.plot(time_vector, membrane_potential)
-    plt.plot(time_vector, current_axis, 'r')
-    plt.xlabel('Time [ms]')
-    plt.ylabel('Potential V [mV]')
-    plt.legend('Membrane potential', 'Excitation current', loc = 'best')
-    plt.title('{}'.format(title))
-    plt.show()
-
-
-
-
-
-if __name__ == '__main__':  
-    path_file = os.getcwd()
-    path_file = pathlib.Path(path_file)
-    filename = 'eeg_file_mathematics_subject.csv'
-    eeg_file = pd.read_csv(path_file / filename)
-    eeg_dataframe = pd.DataFrame(eeg_file)
-    correlation_list = []
-    neuron_types = ['CH', 'LTS', 'RS', 'FS']
-    for n in [10,100,1000]:
-        inh_neuron_type = np.random.choice(neuron_types)
-        exc_neuron_type = np.random.choice(neuron_types)
-        bnn = biological_neural_network(inhibitory_neuron_type=inh_neuron_type, exhibitory_neuron_type=inh_neuron_type,
-                                    no_neurons= n, no_synapses= 10000, inhibitory_prob= 5,
-                                     current=5, total_time=2000, time_init=200, time_final=1700, display = False)
-        network_signal_value, network_current = bnn.forward()
-        for i in range(eeg_dataframe.shape[1]):
-            if i == 0: pass
-            eeg_signal = eeg_dataframe.iloc[:,i]
-            correlation_value = perfom_correlation_coefficient(eeg_signal, network_signal_value[0])
-            correlation_list.append((n, i, correlation_value,inh_neuron_type, exc_neuron_type ))
-    z,x,y, inh, exc = max(correlation_list, key = lambda x : x[2])
-    print('The electrode number {} has the higher similarity with the BNN signal, having the correlation coefficient = {}, for {} neurons.'.format(x, y, z))
-    print('The neurons type are : inhibitory = {} , excitatory = {}'.format(inh, exc))
-    print('-----------------------------------------------')
-    for neu_type in neuron_types :
-        continous_impulse_encoding(neu_type, 7)
 
 
