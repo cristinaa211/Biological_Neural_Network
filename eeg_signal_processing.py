@@ -2,6 +2,23 @@ import mne
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+from scipy.signal import correlate
+
+def xcorr(sig1, sig2): 
+    "Plot cross-correlation (full) between two signals."
+    N = max(len(sig1), len(sig2)) 
+    n = min(len(sig1), len(sig2)) 
+    if N == len(sig2): 
+        lags = np.arange(-N + 1, n) 
+    else: 
+        lags = np.arange(-n + 1, N) 
+    sig1 = sig1 / np.std(sig1)
+    sig2 = sig2 / np.std(sig2)
+    cross_corr = correlate(sig1, sig2 , 'same') / n
+    if any(cross_corr) > 1 :
+        print("something is wrong")
+    return lags, cross_corr
+
 
 
 def plot_eeg_signals(df):
@@ -57,3 +74,4 @@ if __name__ == "__main__":
         axes[idx % 7, idx % 3].set_title('{}'.format(col))
         idx += 1
     plt.show()
+

@@ -3,6 +3,9 @@ import pandas as pd
 from bnn import BiologicalNeuralNetwork
 from operations import correlation_coefficient
 import logging
+from eeg_signal_processing import xcorr
+import matplotlib.pyplot as plt 
+
 
 
 def compare_bnn_eeg_signals(eeg_csv_file, range_no_neurons, display_plots = False):
@@ -20,19 +23,27 @@ def compare_bnn_eeg_signals(eeg_csv_file, range_no_neurons, display_plots = Fals
     correlation_list = []
     logging.basicConfig(filename="log.txt", level=logging.INFO)
     logging.info('NEW SIMULATION')
+
     for _ in range(9):
         inh_neuron_type = np.random.choice(neuron_types)
         exc_neuron_type = np.random.choice(neuron_types)
+        plt.figure()
         for n in range_no_neurons:
             bnn = BiologicalNeuralNetwork(inhibitory_neuron_type=inh_neuron_type, exhibitory_neuron_type=inh_neuron_type,
                                         no_neurons= n, no_synapses= n * 10, inhibitory_prob = 0.5,
                                         current = 7, total_time= 2500)
             network_signal_value = bnn.forward(display = display_plots)
+            network_signal_value = network_signal_value[0].ravel()
             for i in range(eeg_dataframe.shape[1]):
                 if i == 0: pass
-                eeg_signal = eeg_dataframe.iloc[:,i]
-                correlation_value = correlation_coefficient(eeg_signal, network_signal_value[0],i, display = display_plots)
+                eeg_signal = eeg_dataframe.iloc[:,i].ravel()
+                correlation_value = correlation_coefficient(eeg_signal, network_signal_value,i, display = display_plots)
                 correlation_list.append((n, i, correlation_value, inh_neuron_type, exc_neuron_type ))
+                lags, corr = xcorr(eeg_signal, network_signal_value)
+                plt.plot(lags, corr) 
+        plt.title('Cross-correlation')
+        plt.xlabel('Lags')
+        plt.show() 
     nr_neurons, electrode, corr_coeff, inh, exc = max(correlation_list, key = lambda x : x[2])
     for line in correlation_list:
         logging.info('The signal from electrode number {} has the correlation coefficient = {} with the BNN signal, BNN having {} neurons.'.format(line[1], line[2], line[0]))
@@ -44,7 +55,7 @@ def compare_bnn_eeg_signals(eeg_csv_file, range_no_neurons, display_plots = Fals
 
 if __name__ == '__main__':  
     filename = './eeg_math_subj.csv'
-    range_no_neurons = [10, 100, 1000]
+    range_no_neurons = [10]
     correlation_list = compare_bnn_eeg_signals(filename, range_no_neurons, display_plots= False)
     df_corr_list = pd.DataFrame(data = correlation_list, columns= ['no_neurons', 'electrode', 'correlation_coeff', 'inh_type', 'exc_type'])
-    df_corr_list.to_csv('./correlation_list.csv')
+    df_corr_list.to_csv('./correlation_list_2.csv')

@@ -3,6 +3,7 @@ import numpy as np
 import scipy.special as sps  
 
 
+
 def generate_histogram(weights_matrix):
     count, bisn, ignored = plt.hist(weights_matrix, 50, density=True)
     plt.plot(bisn, count)
