@@ -4,3 +4,4 @@ webServerApiSettings.json
 .vscode 
 correlation_list_2.csv
 correlation_list.csv
+bnn.py 

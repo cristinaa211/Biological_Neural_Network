@@ -1,10 +1,6 @@
 import numpy as np 
-import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import math
-
-
 
 def neuron_type(neuron_type):
     """Provides parameters for each type of neuron, according to the Izhikevich Neuron Model"""
@@ -39,7 +35,7 @@ def neuron_type(neuron_type):
 
 def continous_impulse_encoding(neurontype, input_current = 7):
     a, b, c, d = neuron_type(neurontype)
-    initial_time, final_time, total_time, dt = 100, 700, 1000, 0.5
+    initial_time, total_time, dt = 100, 1000, 0.5
     T = math.ceil(total_time / dt)
     T = int(T)
     membrane_potential = np.zeros((T,1))

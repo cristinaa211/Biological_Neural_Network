@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt 
 import numpy as np
 import scipy.special as sps  
-from sklearn import preprocessing
 
 def generate_histogram(weights_matrix):
     count, bisn, ignored = plt.hist(weights_matrix, 50, density=True)
