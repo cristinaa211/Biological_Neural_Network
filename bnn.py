@@ -94,8 +94,8 @@ class BiologicalNeuralNetwork:
             weights[idx] =  random_gamma_distr_values[i][0]
             i += 1
         distribution = [weights[idx] for idx in indices]
-        sns.histplot(distribution)
-        plt.xlabel('Weights values')
+        # sns.histplot(distribution)
+        # plt.xlabel('Weights values')
         # plt.show()
         weights = np.reshape(weights, (self.no_neurons , self.no_neurons))
         # the connections between the inhibitory neurons and the excitatory neurons are two times stronger

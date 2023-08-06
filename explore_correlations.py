@@ -2,8 +2,6 @@ import pandas as pd
 import matplotlib.pyplot as plt 
 
 
-
-
 if __name__ == "__main__":
     df = pd.read_csv("./correlation_list.csv")
     df['neuron_pair'] = df['inh_type'] + '-' + df['exc_type']

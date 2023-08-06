@@ -1,8 +1,7 @@
 import matplotlib.pyplot as plt 
 import numpy as np
 import scipy.special as sps  
-
-
+from sklearn import preprocessing
 
 def generate_histogram(weights_matrix):
     count, bisn, ignored = plt.hist(weights_matrix, 50, density=True)
@@ -33,24 +32,24 @@ def perfom_fft_of_signal(signal, title):
     plt.show()
 
 def correlation_coefficient(signal1, signal2, idx, display = True):
-    signal1 = signal1.ravel() / max(signal2)
-    signal2 = signal2.ravel() / max(signal2)
+    signal1 = signal1.ravel() 
+    signal2 = signal2.ravel()
     correlation = np.correlate(signal1, signal2, mode='full')
-    correlation = correlation / (np.linalg.norm(signal1) * np.linalg.norm(signal2))
+    correlation = correlation / np.linalg.norm(correlation)
     if display == True:
         plt.figure()
         plt.subplot(3, 1, 1)
         plt.plot(np.arange(0, len(signal1)), signal1 )
         plt.xlabel('Time [ms]')
-        plt.ylabel('Voltage [norm]')
+        plt.ylabel('Voltage [uV]')
         plt.title('EEG signal Electrode {}'.format(idx))
         plt.subplot(3, 1, 2)
         plt.plot(np.arange(0, len(signal2)), signal2 )
         plt.xlabel('Time [ms]')
-        plt.ylabel('Voltage [norm]')
+        plt.ylabel('Voltage [uV]')
         plt.title('BNN signal')
         plt.subplot(3, 1, 3)
-        plt.plot(np.arange(0, len(correlation)), correlation)
+        plt.plot(np.arange(-len(correlation)/2, len(correlation)/2), correlation)
         plt.xlabel('Index')
         plt.ylabel('Correlation coefficient [norm]')
         plt.title('Cross-correlation of EEG signal and BNN signal')
@@ -62,4 +61,4 @@ def correlation_coefficient(signal1, signal2, idx, display = True):
         signal11 = np.resize(signal1, len(signal2))
         signal22 = signal2
     correlation_coef = np.corrcoef(signal11, signal22)[0, 1]
-    return correlation_coef
+    return correlation_coef, correlation.ravel()
