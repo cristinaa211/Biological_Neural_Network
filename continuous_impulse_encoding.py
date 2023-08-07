@@ -33,7 +33,7 @@ def neuron_type(neuron_type):
     return a , b , c , d 
 
 
-def continous_impulse_encoding(neurontype, input_current = 7):
+def continous_impulse_encoding(neurontype, title, input_current = 7):
     a, b, c, d = neuron_type(neurontype)
     initial_time, total_time, dt = 100, 1000, 0.5
     T = math.ceil(total_time / dt)
@@ -44,7 +44,7 @@ def continous_impulse_encoding(neurontype, input_current = 7):
     current_axis = np.zeros_like(current)
     membrane_potential[0] = -70
     recovery_variable[0] = -14
-    for t in range(T-1):
+    for t in range(T-3):
         I_applied = [input_current if t*dt > initial_time else 0][0]
         current[t] = I_applied
         if I_applied > 10: I_applied = 10
@@ -59,18 +59,19 @@ def continous_impulse_encoding(neurontype, input_current = 7):
             membrane_potential[t] = 35
             membrane_potential[t+1] = c
             recovery_variable[t+1] = recovery_variable[t] + d
-    time_vector = dt * np.arange(0, T)
+    time_vector = dt * np.arange(-1, T-1)
     plt.figure()
     plt.plot(time_vector, membrane_potential)
     plt.plot(time_vector, current_axis, 'r')
     plt.xlabel('Time [ms]')
+    plt.xlim([0, 950])
     plt.ylabel('Potential V [mV]')
     plt.legend('Membrane potential', 'Excitation current', loc = 'best')
-    plt.title('Neuron Type: {}'.format(neurontype))
+    plt.title('Neuron Type: {}'.format(title))
     plt.show()
 
 
 if __name__ == "__main__":
-    neuron_types = ['CH', 'LTS', 'RS', 'FS']
-    for neu_type in neuron_types :
-        continous_impulse_encoding(neu_type, 7)
+    neuron_types = {'CH' :'Chattering CH', 'LTS' :  'Low-threshold spikes LTS', 'RS' : 'Regular Spiking RS', 'FS' :  'Fast Spiking FS' }
+    for neu_type in neuron_types.keys() :
+        continous_impulse_encoding(neu_type, neuron_types[neu_type], 5)

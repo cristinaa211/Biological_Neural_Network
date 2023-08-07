@@ -16,15 +16,14 @@ def compare_bnn_eeg_signals(eeg_csv_file, range_no_neurons, display_plots = Fals
         """
     eeg_file = pd.read_csv(eeg_csv_file)
     eeg_dataframe = pd.DataFrame(eeg_file)
-    neuron_types = ['CH', 'LTS', 'RS', 'FS']
+    exc_neuron_types = ['CH', 'RS']
+    inh_neuron_types = ['LTS', 'FS']
     correlation_list = []
     logging.basicConfig(filename="log.txt", level=logging.INFO)
     logging.info('NEW SIMULATION')
     colors = ['b', 'g', 'r']
-    # inh_neuron_type = np.random.choice(neuron_types)
-    # exc_neuron_type = np.random.choice(neuron_types)
-    inh_neuron_type = 'FS'
-    exc_neuron_type = 'RS'
+    inh_neuron_type = np.random.choice(inh_neuron_types)
+    exc_neuron_type = np.random.choice(exc_neuron_types)
     eeg_signal = eeg_dataframe.iloc[:,0]
     print('INHIBITORY NEURON: {}, EXHIBITORY NEURON: {}'.format(inh_neuron_type, exc_neuron_type))
     idx = 0
