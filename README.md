@@ -1,6 +1,7 @@
 # Biological Neural Network (BNN)
 
 The Biological Neural Network presented in the paper is based on the Izhikevich Neuron Model. 
+
 **The main paper is the following:**
 https://iopscience.iop.org/article/10.1088/1757-899X/1254/1/012025
 
