@@ -21,26 +21,29 @@ def compare_bnn_eeg_signals(eeg_csv_file, range_no_neurons, display_plots = Fals
     logging.basicConfig(filename="log.txt", level=logging.INFO)
     logging.info('NEW SIMULATION')
     colors = ['b', 'g', 'r']
+    # inh_neuron_type = np.random.choice(neuron_types)
+    # exc_neuron_type = np.random.choice(neuron_types)
+    inh_neuron_type = 'FS'
+    exc_neuron_type = 'RS'
     eeg_signal = eeg_dataframe.iloc[:,0]
-    for _ in range(4):
-        inh_neuron_type = np.random.choice(neuron_types)
-        exc_neuron_type = np.random.choice(neuron_types)
-        print('INHIBITORY NEURON: {}, EXHIBITORY NEURON: {}'.format(inh_neuron_type, exc_neuron_type))
-        idx = 0
-        plt.figure()
-        for n in range_no_neurons:
-            for i in range(0,20):
-                bnn = BiologicalNeuralNetwork(inhibitory_neuron_type=inh_neuron_type, exhibitory_neuron_type=inh_neuron_type,
-                                        no_neurons= n, no_synapses= n * 10, inhibitory_prob = 0.5,
-                                        current = 7, total_time= 2500)
-                network_signal_value = bnn.forward(display = display_plots)
-                correlation_value, cross_corr = correlation_coefficient(eeg_signal, network_signal_value, i, display = False)
-                correlation_list.append((n, i, correlation_value, inh_neuron_type, exc_neuron_type ))
-                plt.plot(np.arange(-len(cross_corr)/2, len(cross_corr)/2), cross_corr, colors[idx], label = '{} neurons'.format(n))
-            idx += 1
+    print('INHIBITORY NEURON: {}, EXHIBITORY NEURON: {}'.format(inh_neuron_type, exc_neuron_type))
+    idx = 0
+    plt.figure()
+    for n in range_no_neurons:
+        for i in range(0,2):
+            bnn = BiologicalNeuralNetwork(inhibitory_neuron_type=inh_neuron_type, exhibitory_neuron_type=inh_neuron_type,
+                                    no_neurons = n, no_synapses= 10*n, inhibitory_prob = 0.2,
+                                    current = 5, total_time= 2200)
+            network_signal_value = bnn.forward(display = display_plots)
+            correlation_value, cross_corr = correlation_coefficient(eeg_signal, network_signal_value, i, display = False)
+            correlation_list.append((n, i, correlation_value, inh_neuron_type, exc_neuron_type ))
+            plt.plot(np.arange(-len(cross_corr)/2, len(cross_corr)/2), cross_corr, colors[idx], label = '{} neurons'.format(n))
+        idx += 1
     plt.xlabel('Index')
+    plt.legend(loc = 'best')
     plt.ylabel('Correlation coefficient')
     plt.title('Cross-correlation of EEG signal and BNN signal')
+    plt.suptitle('Inhibitory neuron: {}, Exhibitory neuron: {}'.format(inh_neuron_type, exc_neuron_type))
     plt.show()
     nr_neurons, electrode, corr_coeff, inh, exc = max(correlation_list, key = lambda x : x[2])
     logging.info('The  signal from electrode number {} has the higher similarity with the BNN signal, having the correlation coefficient = {}. BNN has {} neurons.'.format(electrode, corr_coeff, nr_neurons))

@@ -70,7 +70,6 @@ def continous_impulse_encoding(neurontype, input_current = 7):
     plt.show()
 
 
-
 if __name__ == "__main__":
     neuron_types = ['CH', 'LTS', 'RS', 'FS']
     for neu_type in neuron_types :

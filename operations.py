@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt 
 import numpy as np
 import scipy.special as sps  
+from scipy.fft import rfft, rfftfreq
 
 def generate_histogram(weights_matrix):
-    count, bisn, ignored = plt.hist(weights_matrix, 50, density=True)
+    count, bisn = plt.hist(weights_matrix, 50, density=True)
     plt.plot(bisn, count)
     plt.xlabel('Value')
     plt.ylabel('Frequency')
@@ -12,23 +13,23 @@ def generate_histogram(weights_matrix):
 
     
 def generate_gamma_distribution(shape, scale, gamma_distribution): 
-    count, bins, ignored = plt.hist(gamma_distribution, 50, density=True)
+    count, bins = plt.hist(gamma_distribution, 50, density=True)
     y = bins**(shape-1)*(np.exp(-bins/scale) /  
                         (sps.gamma(shape)*scale**shape))
     plt.plot(bins, y, linewidth=2, color='r')  
     plt.title('Gamma distribution for the values of inhibitory neurons')
-    # plt.show()
-    
-def perfom_fft_of_signal(signal, title):
-    signal = np.int16((signal / signal.max()))
-    fourier_transform = np.fft.rfft(signal- np.mean(signal), norm='ortho')
-    frequency = np.fft.rfftfreq(len(signal))
-    spectrum_magnitude = np.abs(fourier_transform)[0:] 
-    plt.plot(frequency, spectrum_magnitude)
+    plt.show()
+
+def fft_signal(signal, sample_rate, title):
+    signal = signal.ravel() - np.mean(signal)
+    magnitude = np.abs(rfft(signal))
+    frequency = rfftfreq(len(signal), 1 / sample_rate)
+    plt.plot(frequency, magnitude)
     plt.xlabel('Frequency (Hz)')
     plt.ylabel('Magnitude')
     plt.title('{}'.format(title))
     plt.show()
+
 
 def correlation_coefficient(signal1, signal2, idx, display = True):
     signal1 = signal1.ravel() 
@@ -60,4 +61,4 @@ def correlation_coefficient(signal1, signal2, idx, display = True):
         signal11 = np.resize(signal1, len(signal2))
         signal22 = signal2
     correlation_coef = np.corrcoef(signal11, signal22)[0, 1]
-    return correlation_coef, correlation.ravel()
+    return correlation_coef, correlation
