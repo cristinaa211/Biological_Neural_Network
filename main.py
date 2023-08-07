@@ -31,7 +31,7 @@ def compare_bnn_eeg_signals(eeg_csv_file, range_no_neurons, display_plots = Fals
     for n in range_no_neurons:
         for i in range(0,2):
             bnn = BiologicalNeuralNetwork(inhibitory_neuron_type=inh_neuron_type, exhibitory_neuron_type=inh_neuron_type,
-                                    no_neurons = n, no_synapses= 10*n, inhibitory_prob = 0.2,
+                                    no_neurons = n, no_synapses= 10000, inhibitory_prob = 0.2,
                                     current = 5, total_time= 2200)
             network_signal_value = bnn.forward(display = display_plots)
             correlation_value, cross_corr = correlation_coefficient(eeg_signal, network_signal_value, i, display = False)
