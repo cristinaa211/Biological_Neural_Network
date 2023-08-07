@@ -1,6 +1,8 @@
 # Biological Neural Network (BNN)
 
-The Biological Neural Network presented in the paper specified at the end of this file is based on the Izhikevich Neuron Model. 
+The Biological Neural Network presented in the paper is based on the Izhikevich Neuron Model. 
+**The main paper is the following:**
+https://iopscience.iop.org/article/10.1088/1757-899X/1254/1/012025
 
 **Main Izhikevich Neuron Model Paper**
 https://www.izhikevich.org/publications/spikes.pdf
@@ -21,7 +23,5 @@ EEG Signals used for comparison:
 
 ![eeg_signals](https://github.com/cristinaa211/BNN/assets/61435903/f34a45b4-bcf5-4945-8550-4802c1c8c01b)
 
-**The main paper is the following:**
 
-https://iopscience.iop.org/article/10.1088/1757-899X/1254/1/012025
 
